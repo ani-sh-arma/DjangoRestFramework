@@ -1,9 +1,9 @@
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from home.models import Person
-from home.serializer import LoginSerializer, PersonSerializer
+from home.serializer import LoginSerializer, PersonSerializer, RegisterSerializer
 
 @api_view(['GET','POST'])
 def index(request):
@@ -12,7 +12,27 @@ def index(request):
         data = f"Name of the Person is {data.get('name')} and age is {data.get('age')}"
         return Response({"message": "This is post method!", 'data': data})
 
-    return Response({"message": "Hello, World!"})
+    return Response({"message": "Hello, World!"} , status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def login(request):
+    data = request.data
+    serializer = LoginSerializer(data=data)
+
+    if serializer.is_valid():
+        return Response(serializer.validated_data)
+
+    return Response(serializer.errors)
+
+@api_view(['POST'])
+def register(request):
+    data = request.data
+    serializer = RegisterSerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "User Created", "data":serializer.errors}, status=status.HTTP_201_CREATED)
+    else:
+        return Response({"message":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 # class PersonView(APIView):
 #     def get(self, request):
@@ -64,15 +84,6 @@ def index(request):
 #         except:
 #             return Response({'message':"Person Not Found!"})
 
-# @api_view(['POST'])
-# def login(request):
-#     data = request.data
-#     serializer = LoginSerializer(data=data)
-
-#     if serializer.is_valid():
-#         return Response(serializer.validated_data)
-
-#     return Response(serializer.errors)
 
 # @api_view(['GET','POST', 'PUT', 'PATCH', 'DELETE'])
 # def person(request):
@@ -136,3 +147,14 @@ def index(request):
 class PersonViewSet(viewsets.ModelViewSet):
     serializer_class = PersonSerializer
     queryset = Person.objects.all()
+
+    def list(self, request):
+        search = request.GET.get('search')
+        if search:
+            self.queryset = self.queryset.filter(name__contains=search)
+        serializer = PersonSerializer(self.queryset, many=True)
+
+        if serializer.data != []:
+            return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+        
+        return Response({"message": "Person Not Found!"}, status=status.HTTP_204_NO_CONTENT)
