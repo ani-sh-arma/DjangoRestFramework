@@ -45,13 +45,15 @@ from .models import Color, Person
 from django.contrib.auth.models import User
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    username = serializers.CharField()
     password = serializers.CharField()
 
-    def validate(self, data):
-        if len(data.get('password')) < 8:
-            raise serializers.ValidationError("Password must be at least 8 characters long.")
-        return data
+    # def validate(self, data):
+    #     if User.objects.filter(username=data.get('username')).exists():
+    #         raise serializers.ValidationError("Username already exists.")
+    #     if len(data.get('password')) < 8:
+    #         raise serializers.ValidationError("Password must be at least 8 characters long.")
+    #     return data
 
 class RegisterSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -59,18 +61,15 @@ class RegisterSerializer(serializers.Serializer):
     password = serializers.CharField()
 
     def validate(self, data):
-        if data.get('username'):
-            print(User.objects.get(username=data.get('username')))
-            print(data.get('username'))
-            if User.objects.filter(username=data.get('username')).exists:
-                raise serializers.ValidationError("Username already exists.")
-        if data.get('email') == User.objects.get(username=data.get('username')).email:
+        if User.objects.filter(email=data.get('email')).exists():
             raise serializers.ValidationError("Thus email is already used.")
         if len(data.get('password')) < 8:
             raise serializers.ValidationError("Password must be at least 8 characters long.")
         return data
     
-    # TODO: implement create and update methods
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        return user
 
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
